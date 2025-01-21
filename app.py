@@ -1,126 +1,236 @@
 #!/usr/bin/env python3
+import os
 from flask import Flask, request, render_template_string
 
 app = Flask(__name__)
 
-# Minimal HTML form (inline) for demonstration purposes.
-# In a real-world scenario, you'd likely store templates as separate .html files.
+# HTML form for two scenarios: Current State and Future State
 form_html = """
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Queueing Calculator</title>
+    <title>Queueing Calculator - Compare Current & Future</title>
+    <style>
+      body { font-family: sans-serif; }
+      h1, h2 { margin-bottom: 0.5em; }
+      .scenario-box {
+        border: 1px solid #ccc; 
+        padding: 1em; 
+        margin: 1em 0;
+      }
+      label { font-weight: bold; }
+      input { width: 100px; }
+    </style>
   </head>
   <body>
-    <h1>Queueing Calculator</h1>
+    <h1>Compare Current & Future States</h1>
     <form method="POST" action="/">
-      <p>
-        <label>Your Utilisation (0.0 - 1.0):</label><br>
-        <input type="number" step="0.01" name="rho_you" value="0.50" required>
-      </p>
       
-      <p>
-        <label>Requests per Week:</label><br>
-        <input type="number" step="1" name="requests_per_week" value="5" required>
-      </p>
+      <div class="scenario-box">
+        <h2>Current State</h2>
+        <p>
+          <label>Your Utilisation (0.0 - 1.0):</label><br>
+          <input type="number" step="0.01" name="rho_you_cur" value="0.50" required>
+        </p>
+        <p>
+          <label>Requests per Week:</label><br>
+          <input type="number" step="1" name="requests_cur" value="5" required>
+        </p>
+        <p>
+          <label>Base Wait Time (hrs) at Ref Util:</label><br>
+          <input type="number" step="0.01" name="base_wait_time_cur" value="2.0" required>
+        </p>
+        <p>
+          <label>Ref Util (0.0 - 1.0):</label><br>
+          <input type="number" step="0.01" name="ref_util_cur" value="0.50" required>
+        </p>
+        <p>
+          <label>Cost of Delay (£ per hour):</label><br>
+          <input type="number" step="0.01" name="cost_of_delay_cur" value="100" required>
+        </p>
+        <p>
+          <label>Willing to Pay (£/week):</label><br>
+          <input type="number" step="0.01" name="willing_to_pay_cur" value="0" required>
+        </p>
+      </div>
       
-      <p>
-        <label>Base Wait Time (hrs) at Ref Util:</label><br>
-        <input type="number" step="0.01" name="base_wait_time" value="2.0" required>
-      </p>
+      <div class="scenario-box">
+        <h2>Future State</h2>
+        <p>
+          <label>Your Utilisation (0.0 - 1.0):</label><br>
+          <input type="number" step="0.01" name="rho_you_fut" value="0.90" required>
+        </p>
+        <p>
+          <label>Requests per Week:</label><br>
+          <input type="number" step="1" name="requests_fut" value="5" required>
+        </p>
+        <p>
+          <label>Base Wait Time (hrs) at Ref Util:</label><br>
+          <input type="number" step="0.01" name="base_wait_time_fut" value="2.0" required>
+        </p>
+        <p>
+          <label>Ref Util (0.0 - 1.0):</label><br>
+          <input type="number" step="0.01" name="ref_util_fut" value="0.50" required>
+        </p>
+        <p>
+          <label>Cost of Delay (£ per hour):</label><br>
+          <input type="number" step="0.01" name="cost_of_delay_fut" value="100" required>
+        </p>
+        <p>
+          <label>Willing to Pay (£/week):</label><br>
+          <input type="number" step="0.01" name="willing_to_pay_fut" value="500" required>
+        </p>
+      </div>
       
-      <p>
-        <label>Ref Util (0.0 - 1.0):</label><br>
-        <input type="number" step="0.01" name="ref_util" value="0.50" required>
-      </p>
-      
-      <p>
-        <label>Cost of Delay (£ per hour):</label><br>
-        <input type="number" step="0.01" name="cost_of_delay" value="100" required>
-      </p>
-      
-      <p>
-        <label>Willing to Pay for Extra Utilisation (£/week):</label><br>
-        <input type="number" step="0.01" name="willing_to_pay" value="0" required>
-      </p>
-      
-      <button type="submit">Calculate</button>
+      <button type="submit">Calculate Both</button>
     </form>
   </body>
 </html>
 """
 
-# The results page, also inline for brevity.
+# Results page: shows side-by-side comparison of Current State & Future State
 result_html = """
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Queueing Calculator Results</title>
+    <title>Queueing Comparison Results</title>
+    <style>
+      body { font-family: sans-serif; }
+      .scenario-table {
+        display: table;
+        width: 100%%;
+        border-collapse: collapse;
+        margin-bottom: 2em;
+      }
+      .scenario-row { display: table-row; }
+      .scenario-cell {
+        display: table-cell;
+        vertical-align: top;
+        border: 1px solid #ccc;
+        padding: 1em;
+        width: 50%%;
+      }
+      h2 { margin-top: 0; }
+    </style>
   </head>
   <body>
-    <h1>Queueing Results</h1>
-    <p><strong>Your Utilisation:</strong> {{ rho_you }}</p>
-    <p><strong>Requests per Week:</strong> {{ requests_per_week }}</p>
-    <p><strong>Base Wait Time (hrs) at Ref Util:</strong> {{ base_wait_time }}</p>
-    <p><strong>Ref Util:</strong> {{ ref_util }}</p>
-    <p><strong>Cost of Delay (£/hr):</strong> {{ cost_of_delay }}</p>
-    <p><strong>Willing to Pay (£/week):</strong> {{ willing_to_pay }}</p>
-
-    <hr>
-    <h2>Calculated Values</h2>
-    <p><strong>Wait Time (hrs/request):</strong> {{ per_request_wait }}</p>
-    <p><strong>Total Delay (hrs/week):</strong> {{ total_delay }}</p>
-    <p><strong>Total Delay Cost (£/week):</strong> {{ total_delay_cost }}</p>
-    <p><strong>Net Trade-Off (£/week):</strong> {{ net_tradeoff }}</p>
-
-    <hr>
+    <h1>Comparison of Current vs. Future State</h1>
+    
+    <div class="scenario-table">
+      <div class="scenario-row">
+        <div class="scenario-cell">
+          <h2>Current State</h2>
+          <p><strong>Your Utilisation:</strong> {{ rho_you_cur }}</p>
+          <p><strong>Requests/Week:</strong> {{ requests_cur }}</p>
+          <p><strong>Base Wait Time:</strong> {{ base_wait_time_cur }} hrs (Ref Util: {{ ref_util_cur }})</p>
+          <p><strong>Cost of Delay:</strong> £{{ cost_of_delay_cur }}/hr</p>
+          <p><strong>Willing to Pay:</strong> £{{ willing_to_pay_cur }}/week</p>
+          <hr>
+          <h3>Results</h3>
+          <p><strong>Per-Request Wait Time:</strong> {{ wait_cur }} hrs</p>
+          <p><strong>Total Delay:</strong> {{ delay_cur }} hrs/week</p>
+          <p><strong>Total Delay Cost:</strong> £{{ cost_cur }}/week</p>
+          <p><strong>Net Trade-Off:</strong> £{{ net_cur }}/week</p>
+        </div>
+        <div class="scenario-cell">
+          <h2>Future State</h2>
+          <p><strong>Your Utilisation:</strong> {{ rho_you_fut }}</p>
+          <p><strong>Requests/Week:</strong> {{ requests_fut }}</p>
+          <p><strong>Base Wait Time:</strong> {{ base_wait_time_fut }} hrs (Ref Util: {{ ref_util_fut }})</p>
+          <p><strong>Cost of Delay:</strong> £{{ cost_of_delay_fut }}/hr</p>
+          <p><strong>Willing to Pay:</strong> £{{ willing_to_pay_fut }}/week</p>
+          <hr>
+          <h3>Results</h3>
+          <p><strong>Per-Request Wait Time:</strong> {{ wait_fut }} hrs</p>
+          <p><strong>Total Delay:</strong> {{ delay_fut }} hrs/week</p>
+          <p><strong>Total Delay Cost:</strong> £{{ cost_fut }}/week</p>
+          <p><strong>Net Trade-Off:</strong> £{{ net_fut }}/week</p>
+        </div>
+      </div>
+    </div>
+    
     <a href="/">Back to Form</a>
   </body>
 </html>
 """
 
+app = Flask(__name__)
+
 @app.route("/", methods=["GET"])
 def form():
-    # Show the form
+    """Show a single form with fields for both Current and Future states."""
     return render_template_string(form_html)
 
 @app.route("/", methods=["POST"])
 def calculate():
-    # 1. Parse inputs
-    rho_you = float(request.form["rho_you"])
-    requests_per_week = float(request.form["requests_per_week"])
-    base_wait_time = float(request.form["base_wait_time"])
-    ref_util = float(request.form["ref_util"])
-    cost_of_delay = float(request.form["cost_of_delay"])
-    willing_to_pay = float(request.form["willing_to_pay"])
+    """Calculate queueing metrics for both scenarios and display them."""
+    # --- Current State ---
+    rho_you_cur = float(request.form["rho_you_cur"])
+    requests_cur = float(request.form["requests_cur"])
+    base_wait_time_cur = float(request.form["base_wait_time_cur"])
+    ref_util_cur = float(request.form["ref_util_cur"])
+    cost_of_delay_cur = float(request.form["cost_of_delay_cur"])
+    willing_to_pay_cur = float(request.form["willing_to_pay_cur"])
     
-    # 2. Calculate the wait time per request (simple ratio-based approach)
-    #    wait_time = base_wait_time * ((1 - ref_util)/(1 - rho_you)) if rho_you < 1
-    #    or a large fallback if rho_you == 1
-    if (1 - rho_you) == 0:
-        per_request_wait = 999999.9
+    # Calculate wait time for current scenario
+    if (1 - rho_you_cur) == 0:
+        wait_cur = 999999.9
     else:
-        per_request_wait = base_wait_time * ((1 - ref_util) / (1 - rho_you))
+        wait_cur = base_wait_time_cur * ((1 - ref_util_cur) / (1 - rho_you_cur))
     
-    # 3. Calculate total delay and cost
-    total_delay = per_request_wait * requests_per_week
-    total_delay_cost = total_delay * cost_of_delay
-    net_tradeoff = willing_to_pay - total_delay_cost
+    delay_cur = wait_cur * requests_cur
+    cost_cur = delay_cur * cost_of_delay_cur
+    net_cur = willing_to_pay_cur - cost_cur
+
+    # --- Future State ---
+    rho_you_fut = float(request.form["rho_you_fut"])
+    requests_fut = float(request.form["requests_fut"])
+    base_wait_time_fut = float(request.form["base_wait_time_fut"])
+    ref_util_fut = float(request.form["ref_util_fut"])
+    cost_of_delay_fut = float(request.form["cost_of_delay_fut"])
+    willing_to_pay_fut = float(request.form["willing_to_pay_fut"])
     
-    # 4. Render results page
+    # Calculate wait time for future scenario
+    if (1 - rho_you_fut) == 0:
+        wait_fut = 999999.9
+    else:
+        wait_fut = base_wait_time_fut * ((1 - ref_util_fut) / (1 - rho_you_fut))
+    
+    delay_fut = wait_fut * requests_fut
+    cost_fut = delay_fut * cost_of_delay_fut
+    net_fut = willing_to_pay_fut - cost_fut
+
+    # Render results
     return render_template_string(
         result_html,
-        rho_you=rho_you,
-        requests_per_week=requests_per_week,
-        base_wait_time=base_wait_time,
-        ref_util=ref_util,
-        cost_of_delay=cost_of_delay,
-        willing_to_pay=willing_to_pay,
-        per_request_wait=round(per_request_wait, 2),
-        total_delay=round(total_delay, 2),
-        total_delay_cost=round(total_delay_cost, 2),
-        net_tradeoff=round(net_tradeoff, 2)
+        # Current scenario
+        rho_you_cur=rho_you_cur,
+        requests_cur=requests_cur,
+        base_wait_time_cur=base_wait_time_cur,
+        ref_util_cur=ref_util_cur,
+        cost_of_delay_cur=cost_of_delay_cur,
+        willing_to_pay_cur=willing_to_pay_cur,
+        
+        wait_cur=round(wait_cur, 2),
+        delay_cur=round(delay_cur, 2),
+        cost_cur=round(cost_cur, 2),
+        net_cur=round(net_cur, 2),
+
+        # Future scenario
+        rho_you_fut=rho_you_fut,
+        requests_fut=requests_fut,
+        base_wait_time_fut=base_wait_time_fut,
+        ref_util_fut=ref_util_fut,
+        cost_of_delay_fut=cost_of_delay_fut,
+        willing_to_pay_fut=willing_to_pay_fut,
+        
+        wait_fut=round(wait_fut, 2),
+        delay_fut=round(delay_fut, 2),
+        cost_fut=round(cost_fut, 2),
+        net_fut=round(net_fut, 2)
     )
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    # For local testing; Render will use a Start Command (gunicorn, etc.)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=True, host="0.0.0.0", port=port)
