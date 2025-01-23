@@ -13,7 +13,7 @@ form_html = """
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Queueing Calculator - Compare Current & Future</title>
+  <title>Waiter! Calculate the impact of higher team utilisation</title>
   <!-- Bootstrap 5 CSS (CDN) -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
@@ -39,70 +39,70 @@ form_html = """
 </head>
 <body>
   <div class="container">
-    <h1 class="my-4">Queueing Calculator</h1>
-    <p class="text-secondary">Compare <strong>Current</strong> vs. <strong>Future</strong> states with a more polished UI.</p>
-    
+    <h1 class="my-4">Waiter!</h1>
+    <p class="text-secondary">Calculate the impact of higher team utilisation, with a <strong>Current State</strong> vs. a potential <strong>Future</strong> states. In this case "utilisation" means working on tasks that cannot reasonably be interrupted. I.e. 50% means the team are working on something (coding an application, with a patient, or serving a customer) 50% of the time. The remaining 50% is interruptible, such as writing documentation, responding to email, or performing maintenance.</p>
+
     <form method="POST" action="/" class="row g-4">
       <!-- Current State -->
       <div class="col-12 col-lg-6 scenario-card">
         <div class="scenario-title">Current State</div>
-        
-        <label for="rho_you_cur">Your Utilisation (0.0 - 1.0)</label>
+
+        <label for="rho_you_cur">Current Team Utilisation (0.0 is 0%, 1.0 is 100%)</label>
         <input type="number" step="0.01" id="rho_you_cur" name="rho_you_cur"
                class="form-control" placeholder="0.50" value="0.50" required>
-        
-        <label for="requests_cur">Requests per Week</label>
+
+        <label for="requests_cur">On average, roughly how many assistance requests per week do team members make of each other?</label>
         <input type="number" step="1" id="requests_cur" name="requests_cur"
                class="form-control" placeholder="5" value="5" required>
-        
-        <label for="base_wait_time_cur">Base Wait Time (hrs) at Ref Util</label>
+
+        <label for="base_wait_time_cur">And how long do they generally have to wait for a teammate's assistance?</label>
         <input type="number" step="0.01" id="base_wait_time_cur" name="base_wait_time_cur"
                class="form-control" placeholder="2.0" value="2.0" required>
-        
-        <label for="ref_util_cur">Ref Util (0.0 - 1.0)</label>
+
+        <label for="ref_util_cur">This is the reference utilisation for the above wait time - in most cases, this should be the same as above. (0-1)</label>
         <input type="number" step="0.01" id="ref_util_cur" name="ref_util_cur"
                class="form-control" placeholder="0.50" value="0.50" required>
-        
-        <label for="cost_of_delay_cur">Cost of Delay (£ per hour)</label>
+
+        <label for="cost_of_delay_cur">What is your estimated "Cost of Delay" (£ per hour) for this team? If their work is delayed, what does that cost your organisation?</label>
         <input type="number" step="0.01" id="cost_of_delay_cur" name="cost_of_delay_cur"
                class="form-control" placeholder="100" value="100" required>
-        
-        <label for="willing_to_pay_cur">Willing to Pay (£/week)</label>
+
+        <label for="willing_to_pay_cur">Testing purposes - leave this at zero</label>
         <input type="number" step="0.01" id="willing_to_pay_cur" name="willing_to_pay_cur"
                class="form-control" placeholder="0" value="0" required>
       </div>
-      
+
       <!-- Future State -->
       <div class="col-12 col-lg-6 scenario-card">
         <div class="scenario-title">Future State</div>
-        
-        <label for="rho_you_fut">Your Utilisation (0.0 - 1.0)</label>
+
+        <label for="rho_you_fut">What is the team's estimated Future utilisation? (0.0 - 1.0)</label>
         <input type="number" step="0.01" id="rho_you_fut" name="rho_you_fut"
                class="form-control" placeholder="0.90" value="0.90" required>
-        
-        <label for="requests_fut">Requests per Week</label>
+
+        <label for="requests_fut">As a result of this higher utilisation, what is the number of requests you expect them to make of each other?</label>
         <input type="number" step="1" id="requests_fut" name="requests_fut"
                class="form-control" placeholder="5" value="5" required>
-        
-        <label for="base_wait_time_fut">Base Wait Time (hrs) at Ref Util</label>
+
+        <label for="base_wait_time_fut">And how long do those requests usually take?</label>
         <input type="number" step="0.01" id="base_wait_time_fut" name="base_wait_time_fut"
                class="form-control" placeholder="2.0" value="2.0" required>
-        
-        <label for="ref_util_fut">Ref Util (0.0 - 1.0)</label>
+
+        <label for="ref_util_fut">When thinking about those requests, what is the team's utilisation? We'll use this to estimate the future state. (0.0 - 1.0)</label>
         <input type="number" step="0.01" id="ref_util_fut" name="ref_util_fut"
                class="form-control" placeholder="0.50" value="0.50" required>
-        
-        <label for="cost_of_delay_fut">Cost of Delay (£ per hour)</label>
+
+        <label for="cost_of_delay_fut">What is your Cost of Delay in this case? (£ per hour) It's probably the same as your current state, but in case it's different, you can change it here.</label>
         <input type="number" step="0.01" id="cost_of_delay_fut" name="cost_of_delay_fut"
                class="form-control" placeholder="100" value="100" required>
-        
-        <label for="willing_to_pay_fut">Willing to Pay (£/week)</label>
+
+        <label for="willing_to_pay_fut">How much are you willing to pay for this increased utilisation of the team? (£/week) What is the estimated value (per week) of the extra work?</label>
         <input type="number" step="0.01" id="willing_to_pay_fut" name="willing_to_pay_fut"
                class="form-control" placeholder="500" value="500" required>
       </div>
-      
+
       <div class="col-12 text-end">
-        <button type="submit" class="btn btn-primary btn-lg">Calculate Both</button>
+        <button type="submit" class="btn btn-primary btn-lg">Calculate!</button>
       </div>
     </form>
   </div>
@@ -148,7 +148,7 @@ result_html = """
   <div class="container">
     <h1 class="my-4">Comparison of Current vs. Future State</h1>
     <p class="text-secondary">A side-by-side look at queueing metrics, using a Bootstrap-based layout.</p>
-    
+
     <div class="row">
       <div class="col-12 col-lg-6 scenario-card">
         <div class="scenario-title">Current State</div>
@@ -178,7 +178,7 @@ result_html = """
           </tr>
         </table>
       </div>
-      
+
       <div class="col-12 col-lg-6 scenario-card">
         <div class="scenario-title">Future State</div>
         <p><strong>Your Utilisation:</strong> {{ rho_you_fut }}</p>
@@ -208,7 +208,7 @@ result_html = """
         </table>
       </div>
     </div>
-    
+
     <div class="text-end">
       <a href="/" class="btn btn-secondary">Back to Form</a>
     </div>
@@ -232,7 +232,7 @@ def calculate():
     ref_util_cur = float(request.form["ref_util_cur"])
     cost_of_delay_cur = float(request.form["cost_of_delay_cur"])
     willing_to_pay_cur = float(request.form["willing_to_pay_cur"])
-    
+
     # Calculate wait time for current scenario
     if (1 - rho_you_cur) == 0:
         wait_cur = 999999.9
@@ -249,7 +249,7 @@ def calculate():
     ref_util_fut = float(request.form["ref_util_fut"])
     cost_of_delay_fut = float(request.form["cost_of_delay_fut"])
     willing_to_pay_fut = float(request.form["willing_to_pay_fut"])
-    
+
     # Calculate wait time for future scenario
     if (1 - rho_you_fut) == 0:
         wait_fut = 999999.9
@@ -269,7 +269,7 @@ def calculate():
         ref_util_cur=ref_util_cur,
         cost_of_delay_cur=cost_of_delay_cur,
         willing_to_pay_cur=willing_to_pay_cur,
-        
+
         wait_cur=round(wait_cur, 2),
         delay_cur=round(delay_cur, 2),
         cost_cur=round(cost_cur, 2),
@@ -282,7 +282,7 @@ def calculate():
         ref_util_fut=ref_util_fut,
         cost_of_delay_fut=cost_of_delay_fut,
         willing_to_pay_fut=willing_to_pay_fut,
-        
+
         wait_fut=round(wait_fut, 2),
         delay_fut=round(delay_fut, 2),
         cost_fut=round(cost_fut, 2),
