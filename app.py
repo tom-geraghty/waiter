@@ -55,7 +55,7 @@ form_html = """
         <input type="number" step="1" id="requests_cur" name="requests_cur"
                class="form-control" placeholder="5" value="5" required>
 
-        <label for="base_wait_time_cur">And how long do they generally have to wait for a teammate's assistance?</label>
+        <label for="base_wait_time_cur">And how long do they generally have to wait for a teammate's assistance? (hours)</label>
         <input type="number" step="0.01" id="base_wait_time_cur" name="base_wait_time_cur"
                class="form-control" placeholder="2.0" value="2.0" required>
 
@@ -74,7 +74,7 @@ form_html = """
 
       <!-- Future State -->
       <div class="col-12 col-lg-6 scenario-card">
-        <div class="scenario-title">Future State</div>
+        <div class="scenario-title">This is what the team's Future State looks like:</div>
 
         <label for="rho_you_fut">What is the team's estimated Future utilisation? (0.0 - 1.0)</label>
         <input type="number" step="0.01" id="rho_you_fut" name="rho_you_fut"
@@ -147,16 +147,16 @@ result_html = """
 <body>
   <div class="container">
     <h1 class="my-4">Comparison of Current vs. Future State</h1>
-    <p class="text-secondary">A side-by-side look at queueing metrics, using a Bootstrap-based layout.</p>
+    <p class="text-secondary">A side-by-side look at your current team state, vs their potential future state, using simplified queueing theory.</p>
 
     <div class="row">
       <div class="col-12 col-lg-6 scenario-card">
         <div class="scenario-title">Current State</div>
-        <p><strong>Your Utilisation:</strong> {{ rho_you_cur }}</p>
+        <p><strong>Current Team Utilisation:</strong> {{ rho_you_cur }}</p>
         <p><strong>Requests/Week:</strong> {{ requests_cur }}</p>
         <p><strong>Base Wait Time:</strong> {{ base_wait_time_cur }} hrs <small>(Ref Util: {{ ref_util_cur }})</small></p>
         <p><strong>Cost of Delay:</strong> £{{ cost_of_delay_cur }}/hr</p>
-        <p><strong>Willing to Pay:</strong> £{{ willing_to_pay_cur }}/week</p>
+        <p><strong>Net extra value from increased utilisation (zero is expected)</strong> £{{ willing_to_pay_cur }}/week</p>
         <hr>
         <h3>Results</h3>
         <table class="summary-table">
@@ -173,7 +173,7 @@ result_html = """
             <td>£{{ cost_cur }}/week</td>
           </tr>
           <tr>
-            <th>Net Trade-Off</th>
+            <th>£ Impact of wait time</th>
             <td>£{{ net_cur }}/week</td>
           </tr>
         </table>
@@ -181,11 +181,11 @@ result_html = """
 
       <div class="col-12 col-lg-6 scenario-card">
         <div class="scenario-title">Future State</div>
-        <p><strong>Your Utilisation:</strong> {{ rho_you_fut }}</p>
+        <p><strong>Your Team's Future Utilisation:</strong> {{ rho_you_fut }}</p>
         <p><strong>Requests/Week:</strong> {{ requests_fut }}</p>
         <p><strong>Base Wait Time:</strong> {{ base_wait_time_fut }} hrs <small>(Ref Util: {{ ref_util_fut }})</small></p>
         <p><strong>Cost of Delay:</strong> £{{ cost_of_delay_fut }}/hr</p>
-        <p><strong>Willing to Pay:</strong> £{{ willing_to_pay_fut }}/week</p>
+        <p><strong>Anticipated extra value realised from greater utilisation</strong> £{{ willing_to_pay_fut }}/week</p>
         <hr>
         <h3>Results</h3>
         <table class="summary-table">
@@ -202,7 +202,7 @@ result_html = """
             <td>£{{ cost_fut }}/week</td>
           </tr>
           <tr>
-            <th>Net Trade-Off</th>
+            <th>Actual Cost (anticipated value minus wait cost)</th>
             <td>£{{ net_fut }}/week</td>
           </tr>
         </table>
@@ -210,7 +210,7 @@ result_html = """
     </div>
 
     <div class="text-end">
-      <a href="/" class="btn btn-secondary">Back to Form</a>
+      <a href="/" class="btn btn-secondary">Let's recalculate!</a>
     </div>
   </div>
 </body>
