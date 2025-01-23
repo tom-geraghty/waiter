@@ -4,119 +4,85 @@ from flask import Flask, request, render_template_string
 
 app = Flask(__name__)
 
-# We’ll store two HTML templates inline:
-# 1) A Bootstrap-based form for Current State vs. Future State
-# 2) A results page with cards showing each scenario side by side
-
+# ---------------------------
+# 1) The HTML Form
+# ---------------------------
 form_html = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Waiter! Calculate the impact of higher team utilisation</title>
-  <!-- Bootstrap 5 CSS (CDN) -->
+  <title>Team Utilisation Calculator</title>
+  <!-- Bootstrap 5 (CDN) -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body {
-      margin: 20px;
-    }
-    .scenario-card {
-      margin-bottom: 2rem;
+    body { margin: 20px; }
+    .card {
+      margin-bottom: 1.5rem;
       border: 1px solid #ddd;
-      padding: 1rem;
       border-radius: 8px;
+      padding: 1rem;
     }
-    label {
-      font-weight: 500;
-      margin-top: 0.5rem;
-    }
-    .scenario-title {
-      margin-bottom: 1rem;
-      font-weight: 600;
-      font-size: 1.25rem;
-    }
+    label { font-weight: 500; margin-top: 0.5rem; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1 class="my-4">Waiter!</h1>
-    <p class="text-secondary">Calculate the impact of higher team utilisation, with a <strong>Current State</strong> vs. a potential <strong>Future</strong> states. In this case "utilisation" means working on tasks that cannot reasonably be interrupted. I.e. 50% means the team are working on something (coding an application, with a patient, or serving a customer) 50% of the time. The remaining 50% is interruptible, such as writing documentation, responding to email, or performing maintenance.</p>
+<div class="container">
+  <h1 class="my-4">Team Utilisation Calculator</h1>
+  <p>See how higher utilisation affects wait times, costs, and net benefit for a single team.</p>
 
-    <form method="POST" action="/" class="row g-4">
-      <!-- Current State -->
-      <div class="col-12 col-lg-6 scenario-card">
-        <div class="scenario-title">Current State</div>
+  <form method="POST" action="/" class="row g-4">
+    <div class="col-12 col-md-6 card">
+      <label for="current_util">Current Team Utilisation (%)</label>
+      <input type="number" step="1" id="current_util" name="current_util"
+             class="form-control" placeholder="50" value="50" required>
 
-        <label for="rho_you_cur">Current Team Utilisation (0.0 is 0%, 1.0 is 100%)</label>
-        <input type="number" step="0.01" id="rho_you_cur" name="rho_you_cur"
-               class="form-control" placeholder="0.50" value="0.50" required>
+      <label for="num_members">Number of Team Members</label>
+      <input type="number" step="1" id="num_members" name="num_members"
+             class="form-control" placeholder="5" value="5" required>
 
-        <label for="requests_cur">On average, roughly how many assistance requests per week do team members make of each other?</label>
-        <input type="number" step="1" id="requests_cur" name="requests_cur"
-               class="form-control" placeholder="5" value="5" required>
+      <label for="requests_per_member">Avg Requests per Member per Week</label>
+      <input type="number" step="1" id="requests_per_member" name="requests_per_member"
+             class="form-control" placeholder="4" value="4" required>
 
-        <label for="base_wait_time_cur">And how long do they generally have to wait for a teammate's assistance? (hours)</label>
-        <input type="number" step="0.01" id="base_wait_time_cur" name="base_wait_time_cur"
-               class="form-control" placeholder="2.0" value="2.0" required>
+      <label for="current_wait">Current Average Wait Time (hours)</label>
+      <input type="number" step="0.01" id="current_wait" name="current_wait"
+             class="form-control" placeholder="2.0" value="2.0" required>
 
-        <label for="ref_util_cur">This is the reference utilisation for the above wait time - in most cases, this should be the same as above. (0-1)</label>
-        <input type="number" step="0.01" id="ref_util_cur" name="ref_util_cur"
-               class="form-control" placeholder="0.50" value="0.50" required>
+      <label for="cost_delay">Cost of Delay (£ per hour)</label>
+      <input type="number" step="0.01" id="cost_delay" name="cost_delay"
+             class="form-control" placeholder="100" value="100" required>
+    </div>
 
-        <label for="cost_of_delay_cur">What is your estimated "Cost of Delay" (£ per hour) for this team? If their work is delayed, what does that cost your organisation?</label>
-        <input type="number" step="0.01" id="cost_of_delay_cur" name="cost_of_delay_cur"
-               class="form-control" placeholder="100" value="100" required>
+    <div class="col-12 col-md-6 card">
+      <label for="future_util">Desired Future Utilisation (%)</label>
+      <input type="number" step="1" id="future_util" name="future_util"
+             class="form-control" placeholder="80" value="80" required>
 
-        <label for="willing_to_pay_cur">Testing purposes - leave this at zero</label>
-        <input type="number" step="0.01" id="willing_to_pay_cur" name="willing_to_pay_cur"
-               class="form-control" placeholder="0" value="0" required>
-      </div>
+      <label for="future_value">Estimated Value of Higher Utilisation (£/week)</label>
+      <input type="number" step="0.01" id="future_value" name="future_value"
+             class="form-control" placeholder="500" value="500" required>
+    </div>
 
-      <!-- Future State -->
-      <div class="col-12 col-lg-6 scenario-card">
-        <div class="scenario-title">This is what the team's Future State looks like:</div>
-
-        <label for="rho_you_fut">What is the team's estimated Future utilisation? (0.0 - 1.0)</label>
-        <input type="number" step="0.01" id="rho_you_fut" name="rho_you_fut"
-               class="form-control" placeholder="0.90" value="0.90" required>
-
-        <label for="requests_fut">As a result of this higher utilisation, what is the number of requests you expect them to make of each other?</label>
-        <input type="number" step="1" id="requests_fut" name="requests_fut"
-               class="form-control" placeholder="5" value="5" required>
-
-        <label for="base_wait_time_fut">And how long do those requests usually take?</label>
-        <input type="number" step="0.01" id="base_wait_time_fut" name="base_wait_time_fut"
-               class="form-control" placeholder="2.0" value="2.0" required>
-
-        <label for="ref_util_fut">When thinking about those requests, what is the team's utilisation? We'll use this to estimate the future state. (0.0 - 1.0)</label>
-        <input type="number" step="0.01" id="ref_util_fut" name="ref_util_fut"
-               class="form-control" placeholder="0.50" value="0.50" required>
-
-        <label for="cost_of_delay_fut">What is your Cost of Delay in this case? (£ per hour) It's probably the same as your current state, but in case it's different, you can change it here.</label>
-        <input type="number" step="0.01" id="cost_of_delay_fut" name="cost_of_delay_fut"
-               class="form-control" placeholder="100" value="100" required>
-
-        <label for="willing_to_pay_fut">How much are you willing to pay for this increased utilisation of the team? (£/week) What is the estimated value (per week) of the extra work?</label>
-        <input type="number" step="0.01" id="willing_to_pay_fut" name="willing_to_pay_fut"
-               class="form-control" placeholder="500" value="500" required>
-      </div>
-
-      <div class="col-12 text-end">
-        <button type="submit" class="btn btn-primary btn-lg">Calculate!</button>
-      </div>
-    </form>
-  </div>
+    <div class="col-12 text-end">
+      <button type="submit" class="btn btn-primary btn-lg">Calculate</button>
+    </div>
+  </form>
+</div>
 </body>
 </html>
 """
 
+# ---------------------------
+# 2) The Results Page
+# ---------------------------
 result_html = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Queueing Comparison Results</title>
-  <!-- Bootstrap 5 CSS (CDN) -->
+  <title>Utilisation Results</title>
+  <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body { margin: 20px; }
@@ -137,159 +103,134 @@ result_html = """
       padding: 0.75rem;
       text-align: left;
     }
-    .scenario-title {
-      font-weight: 600;
-      font-size: 1.25rem;
-      margin-bottom: 1rem;
-    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1 class="my-4">Comparison of Current vs. Future State</h1>
-    <p class="text-secondary">A side-by-side look at your current team state, vs their potential future state, using simplified queueing theory.</p>
+<div class="container">
+  <h1 class="my-4">Team Utilisation Results</h1>
+  <p>Here is your current vs. future utilisation breakdown.</p>
 
-    <div class="row">
-      <div class="col-12 col-lg-6 scenario-card">
-        <div class="scenario-title">Current State</div>
-        <p><strong>Current Team Utilisation:</strong> {{ rho_you_cur }}</p>
-        <p><strong>Requests/Week:</strong> {{ requests_cur }}</p>
-        <p><strong>Base Wait Time:</strong> {{ base_wait_time_cur }} hrs <small>(Ref Util: {{ ref_util_cur }})</small></p>
-        <p><strong>Cost of Delay:</strong> £{{ cost_of_delay_cur }}/hr</p>
-        <p><strong>Net extra value from increased utilisation (zero is expected)</strong> £{{ willing_to_pay_cur }}/week</p>
-        <hr>
-        <h3>Results</h3>
-        <table class="summary-table">
-          <tr>
-            <th>Per-Request Wait Time</th>
-            <td>{{ wait_cur }} hrs</td>
-          </tr>
-          <tr>
-            <th>Total Delay</th>
-            <td>{{ delay_cur }} hrs/week</td>
-          </tr>
-          <tr>
-            <th>Total Delay Cost</th>
-            <td>£{{ cost_cur }}/week</td>
-          </tr>
-          <tr>
-            <th>£ Impact of wait time</th>
-            <td>£{{ net_cur }}/week</td>
-          </tr>
-        </table>
-      </div>
-
-      <div class="col-12 col-lg-6 scenario-card">
-        <div class="scenario-title">Future State</div>
-        <p><strong>Your Team's Future Utilisation:</strong> {{ rho_you_fut }}</p>
-        <p><strong>Requests/Week:</strong> {{ requests_fut }}</p>
-        <p><strong>Base Wait Time:</strong> {{ base_wait_time_fut }} hrs <small>(Ref Util: {{ ref_util_fut }})</small></p>
-        <p><strong>Cost of Delay:</strong> £{{ cost_of_delay_fut }}/hr</p>
-        <p><strong>Anticipated extra value realised from greater utilisation</strong> £{{ willing_to_pay_fut }}/week</p>
-        <hr>
-        <h3>Results</h3>
-        <table class="summary-table">
-          <tr>
-            <th>Per-Request Wait Time</th>
-            <td>{{ wait_fut }} hrs</td>
-          </tr>
-          <tr>
-            <th>Total Delay</th>
-            <td>{{ delay_fut }} hrs/week</td>
-          </tr>
-          <tr>
-            <th>Total Delay Cost</th>
-            <td>£{{ cost_fut }}/week</td>
-          </tr>
-          <tr>
-            <th>Actual Cost (anticipated value minus wait cost)</th>
-            <td>£{{ net_fut }}/week</td>
-          </tr>
-        </table>
-      </div>
+  <!-- CURRENT STATE -->
+  <div class="row scenario-card">
+    <h3>Current State</h3>
+    <div class="col-12">
+      <p><strong>Team Utilisation:</strong> {{ current_util }}%</p>
+      <p><strong>Number of Team Members:</strong> {{ num_members }}</p>
+      <p><strong>Requests per Member:</strong> {{ requests_per_member }}</p>
+      <p><strong>Per-Request Wait Time (hrs):</strong> {{ current_wait_time }}</p>
+      <p><strong>Cost of Delay (per hour):</strong> £{{ cost_delay }}</p>
     </div>
-
-    <div class="text-end">
-      <a href="/" class="btn btn-secondary">Let's recalculate!</a>
-    </div>
+    <hr>
+    <table class="summary-table">
+      <tr>
+        <th>Current Total Inter-Team Wait Time (hrs/week)</th>
+        <td>{{ current_total_wait }}</td>
+      </tr>
+      <tr>
+        <th>Current Total Delay Cost (£/week)</th>
+        <td>{{ current_total_cost }}</td>
+      </tr>
+    </table>
   </div>
+
+  <!-- FUTURE STATE -->
+  <div class="row scenario-card">
+    <h3>Future State</h3>
+    <div class="col-12">
+      <p><strong>Desired Future Utilisation:</strong> {{ future_util }}%</p>
+      <p><strong>Estimated Extra Value (per week):</strong> £{{ future_value }}</p>
+    </div>
+    <hr>
+    <table class="summary-table">
+      <tr>
+        <th>Future Per-Request Wait Time (hrs)</th>
+        <td>{{ future_wait_time }}</td>
+      </tr>
+      <tr>
+        <th>Future Total Inter-Team Wait Time (hrs/week)</th>
+        <td>{{ future_total_wait }}</td>
+      </tr>
+      <tr>
+        <th>Future Total Delay Cost (£/week)</th>
+        <td>{{ future_total_cost }}</td>
+      </tr>
+      <tr>
+        <th>Net "Best Case" (Value - Future Delay Cost)</th>
+        <td>£{{ net_best_case }}</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="text-end">
+    <a href="/" class="btn btn-secondary">Back to Form</a>
+  </div>
+</div>
 </body>
 </html>
 """
 
+# ---------------------------
+# 3) Flask Routes
+# ---------------------------
 @app.route("/", methods=["GET"])
-def form():
-    """Show a Bootstrap-based form for Current & Future state."""
+def show_form():
+    """Renders the form for entering current/future utilisation data."""
     return render_template_string(form_html)
 
 @app.route("/", methods=["POST"])
 def calculate():
-    """Calculate queueing metrics for both scenarios and display with Bootstrap styling."""
-    # --- Current State ---
-    rho_you_cur = float(request.form["rho_you_cur"])
-    requests_cur = float(request.form["requests_cur"])
-    base_wait_time_cur = float(request.form["base_wait_time_cur"])
-    ref_util_cur = float(request.form["ref_util_cur"])
-    cost_of_delay_cur = float(request.form["cost_of_delay_cur"])
-    willing_to_pay_cur = float(request.form["willing_to_pay_cur"])
+    """Handles form submission, calculates queueing metrics, and displays results."""
+    # Parse form inputs
+    current_util = float(request.form["current_util"]) / 100.0  # convert % to decimal
+    num_members = int(request.form["num_members"])
+    requests_per_member = float(request.form["requests_per_member"])
+    current_wait_hrs = float(request.form["current_wait"])
+    cost_delay_hr = float(request.form["cost_delay"])  # cost of delay per hour
+    future_util = float(request.form["future_util"]) / 100.0    # convert % to decimal
+    future_value = float(request.form["future_value"])
 
-    # Calculate wait time for current scenario
-    if (1 - rho_you_cur) == 0:
-        wait_cur = 999999.9
+    # --- CURRENT CALCULATIONS ---
+    # Per-request wait time = current_wait_hrs (directly from user)
+    # Total requests = num_members * requests_per_member
+    current_total_requests = num_members * requests_per_member
+    current_total_wait = current_total_requests * current_wait_hrs
+    current_total_cost = current_total_wait * cost_delay_hr
+
+    # --- FUTURE CALCULATIONS ---
+    # We'll scale the wait time from current to future using a ratio-based approach
+    # future_wait_time = current_wait_time * [(1 - future_util) / (1 - current_util)]
+    if (1 - current_util) == 0:
+        # If current_util is 100%, formula breaks. We'll assume extremely high wait.
+        future_wait_time = 999999.9
     else:
-        wait_cur = base_wait_time_cur * ((1 - ref_util_cur) / (1 - rho_you_cur))
-    delay_cur = wait_cur * requests_cur
-    cost_cur = delay_cur * cost_of_delay_cur
-    net_cur = willing_to_pay_cur - cost_cur
+        future_wait_time = current_wait_hrs * ((1 - future_util) / (1 - current_util))
 
-    # --- Future State ---
-    rho_you_fut = float(request.form["rho_you_fut"])
-    requests_fut = float(request.form["requests_fut"])
-    base_wait_time_fut = float(request.form["base_wait_time_fut"])
-    ref_util_fut = float(request.form["ref_util_fut"])
-    cost_of_delay_fut = float(request.form["cost_of_delay_fut"])
-    willing_to_pay_fut = float(request.form["willing_to_pay_fut"])
+    future_total_requests = current_total_requests  # same # of requests, unless you want to adjust
+    future_total_wait = future_total_requests * future_wait_time
+    future_total_cost = future_total_wait * cost_delay_hr
 
-    # Calculate wait time for future scenario
-    if (1 - rho_you_fut) == 0:
-        wait_fut = 999999.9
-    else:
-        wait_fut = base_wait_time_fut * ((1 - ref_util_fut) / (1 - rho_you_fut))
-    delay_fut = wait_fut * requests_fut
-    cost_fut = delay_fut * cost_of_delay_fut
-    net_fut = willing_to_pay_fut - cost_fut
+    net_best_case = future_value - future_total_cost
 
-    # Render results
+    # Render results using the second HTML template
     return render_template_string(
         result_html,
-        # Current scenario
-        rho_you_cur=rho_you_cur,
-        requests_cur=requests_cur,
-        base_wait_time_cur=base_wait_time_cur,
-        ref_util_cur=ref_util_cur,
-        cost_of_delay_cur=cost_of_delay_cur,
-        willing_to_pay_cur=willing_to_pay_cur,
+        current_util=int(request.form["current_util"]),  # show as int
+        num_members=num_members,
+        requests_per_member=int(request.form["requests_per_member"]),
+        current_wait_time=round(current_wait_hrs, 2),
+        cost_delay=round(cost_delay_hr, 2),
+        current_total_wait=round(current_total_wait, 2),
+        current_total_cost=round(current_total_cost, 2),
 
-        wait_cur=round(wait_cur, 2),
-        delay_cur=round(delay_cur, 2),
-        cost_cur=round(cost_cur, 2),
-        net_cur=round(net_cur, 2),
-
-        # Future scenario
-        rho_you_fut=rho_you_fut,
-        requests_fut=requests_fut,
-        base_wait_time_fut=base_wait_time_fut,
-        ref_util_fut=ref_util_fut,
-        cost_of_delay_fut=cost_of_delay_fut,
-        willing_to_pay_fut=willing_to_pay_fut,
-
-        wait_fut=round(wait_fut, 2),
-        delay_fut=round(delay_fut, 2),
-        cost_fut=round(cost_fut, 2),
-        net_fut=round(net_fut, 2)
+        future_util=int(request.form["future_util"]),
+        future_value=round(future_value, 2),
+        future_wait_time=round(future_wait_time, 2),
+        future_total_wait=round(future_total_wait, 2),
+        future_total_cost=round(future_total_cost, 2),
+        net_best_case=round(net_best_case, 2)
     )
 
 if __name__ == "__main__":
-    # For local testing:
+    # For local development:
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
